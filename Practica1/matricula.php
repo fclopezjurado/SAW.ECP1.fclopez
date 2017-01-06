@@ -6,8 +6,8 @@
 	<body>
 
 		<?php
-//		session_start();
-//		include ("includes/autenticado.php");
+        session_start();
+        include ("includes/autenticado.php");
 
 		if (isset($_POST['Envio'])) {
 
