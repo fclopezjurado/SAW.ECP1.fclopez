@@ -5,32 +5,37 @@ if (isset($_POST['registro'])) {
 }
 
 if (isset($_POST['login'])) {
-    // TODO 6: Comprobar captcha
+    if (isset($_SESSION) && isset($_POST) && array_key_exists('CAPTCHA', $_SESSION)
+        && array_key_exists('valor', $_POST) && ($_SESSION['CAPTCHA'] === $_POST['valor'])) {
+        include ("includes/abrirbd.php");
+        $sql = "SELECT * FROM usuarios WHERE user ='{$_POST['user']}'";
+        $resultado = mysqli_query($link, $sql);
 
-    include ("includes/abrirbd.php");
-    $sql = "SELECT * FROM usuarios WHERE user ='{$_POST['user']}'";
-    $resultado = mysqli_query($link, $sql);
+        if (mysqli_num_rows($resultado) == 1) {
+            $usuario = mysqli_fetch_assoc($resultado);
+            $hash = hash("sha256", $_POST['passwd'] . $usuario['salt'], false);
+            $validUser = ($hash === $usuario['password']);
 
-    if (mysqli_num_rows($resultado) == 1) {
-        $usuario = mysqli_fetch_assoc($resultado);
-        $hash = hash("sha256", $_POST['passwd'] . $usuario['salt'], false);
-        $validUser = ($hash === $usuario['password']);
-
-        if ($validUser) {
-            $_SESSION['autenticado'] = 'correcto';
-            $_SESSION['permisos'] = str_split($usuario['permisos']);
-            $_SESSION['user'] = $usuario['user'];
-            header("Location:MasterWeb.php");
+            if ($validUser) {
+                $_SESSION['autenticado'] = 'correcto';
+                $_SESSION['permisos'] = str_split($usuario['permisos']);
+                $_SESSION['user'] = $usuario['user'];
+                header("Location:MasterWeb.php");
+            } else {
+                $_SESSION['autenticado'] = 'incorrecto';
+                header("Location: NoAuth.php");
+            }
         } else {
             $_SESSION['autenticado'] = 'incorrecto';
             header("Location: NoAuth.php");
         }
-    } else {
-        $_SESSION['autenticado'] = 'incorrecto';
-        header("Location: NoAuth.php");
-    }
 
-    mysqli_close($link);
+        mysqli_close($link);
+    }
+    else {
+        $_SESSION['autenticado'] = 'incorrecto';
+        header("Location: login.php");
+    }
 } else {
     ?>
     <html>
