@@ -5,8 +5,8 @@
     </head>
 <body>    
     <?php
-  //      session_start();
-  //      include ("includes/autenticado.php");
+    session_start();
+    include ("includes/autenticado.php");
     ?>
 
     <br><br>
