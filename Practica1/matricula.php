@@ -13,7 +13,7 @@
 
 			// GUARDAR EN UN FICHERO LA FIRMA JUNTO CON EL CERTIFICADO (FORMATO PKCS7)
 			$numero = uniqid();
-			$nombreFirma = "firmas/firma_" . $numero . ".pem";
+			$nombreFirma = "firmas\\firma_" . $numero . ".pem";
 			$fp = fopen($nombreFirma, "w");
 			fwrite($fp, "-----BEGIN PKCS7-----\n");
 			fwrite($fp, $_POST['firma']);
@@ -41,71 +41,86 @@
 				$texto = $texto . "SAW=" . $_POST['SAW'];
 			}
 
-			$nombreTexto = "firmas/texto_" . $numero . ".txt";
+			$nombreTexto = "firmas\\texto_" . $numero . ".txt";
 			$ft = fopen($nombreTexto, "w");
 			fwrite($ft, $texto);
 			fclose($ft);
 
-			// TODO 12: comprobar firma con el comando smime DE OpenSSL
-			// OJO, cuidado con los slash(/). Si utilizas '\' lo considera como
-			// un carácter de escape dentro de las cadenas y tendrás problemas.
-			
-			// TODO 13: Si la firma es correcta, comprobar que el usuario firmante
-			//  coincide con el usuario autenticado.
+			$commandOutput = [];
+			$commandExitCode = null;
 
-			
-			
-			// SI LA FIRMA ES CORRECTA, HACER EFECTIVA LA MATRICULA (ya hecho a continuación)
-					if (isset($_POST['IWVG'])) {
-						$_SESSION['permisos'][0] = 'S';
-					}
-					if (isset($_POST['APAW'])) {
-						$_SESSION['permisos'][1] = 'S';
-					}
-					if (isset($_POST['FEM'])) {
-						$_SESSION['permisos'][2] = 'S';
-					}
-					if (isset($_POST['FENW'])) {
-						$_SESSION['permisos'][3] = 'S';
-					}
-					if (isset($_POST['PHP'])) {
-						$_SESSION['permisos'][4] = 'S';
-					}
-					if (isset($_POST['SAW'])) {
-						$_SESSION['permisos'][5] = 'S';
-					}
-					include ("includes/abrirbd.php");
-					$permisos = implode($_SESSION['permisos']);
-					$sql = "UPDATE usuarios SET permisos = '{$permisos}' WHERE user ='{$_SESSION['user']}'";
-					$resultado = mysqli_query($link, $sql);
+			exec('openssl smime -verify -in ' . __DIR__ . '\\' . $nombreFirma. ' -inform PEM -binary -content '
+                . __DIR__ . '\\' . $nombreTexto. ' -CAfile ' . realpath(__DIR__ . '/..'). '\Certificados\CAMIW.crt',
+                $commandOutput, $commandExitCode);
 
-					echo ("<h3><b>Matrícula realizada correctamente:</h3></b>");
-					if (isset($_POST['IWVG'])) {
-						echo ("Ingeniería Web: Visión General <br>");
-					}
-					if (isset($_POST['APAW'])) {
-						echo ("Arquitectura y Patrones para Aplicaciones Web <br>");
-					}
-					if (isset($_POST['FEM'])) {
-						echo ("Front-end para Móviles <br>");
-					}
-					if (isset($_POST['FENW'])) {
-						echo ("Front-end para Navegadores Web <br>");
-					}
-					if (isset($_POST['PHP'])) {
-						echo ("Back-end con Tecnologías de Libre Distribución <br>");
-					}
-					if (isset($_POST['SAW'])) {
-						echo ("Seguridad en Aplicaciones Web <br>");
-					}
-				
-			
-			?>
-			<br><br><A href= 'MasterWeb.php'> Volver a inicio </A>
+			$isSuccessfulSignature = !boolval($commandExitCode);
 
-			<?php
-			
-			
+			if ($isSuccessfulSignature) {
+                $ID = uniqid();
+			    $clientCertificationFile = 'tmp\\client_cert_' .$ID . '.pem';
+
+			    exec('openssl pkcs7 -in ' . __DIR__ . '\\' . $nombreFirma . ' -print_certs -out '
+                    . __DIR__ . '\\' . $clientCertificationFile);
+
+			    $clientCertification = file_get_contents($clientCertificationFile);
+			    $certificationInformation = openssl_x509_parse($clientCertification);
+
+                echo '<h3><b>FIRMA CORRECTA</h3></b>';
+
+                if ($certificationInformation['subject']['CN'] === $_SESSION['user']) {
+                    if (isset($_POST['IWVG'])) {
+                        $_SESSION['permisos'][0] = 'S';
+                    }
+                    if (isset($_POST['APAW'])) {
+                        $_SESSION['permisos'][1] = 'S';
+                    }
+                    if (isset($_POST['FEM'])) {
+                        $_SESSION['permisos'][2] = 'S';
+                    }
+                    if (isset($_POST['FENW'])) {
+                        $_SESSION['permisos'][3] = 'S';
+                    }
+                    if (isset($_POST['PHP'])) {
+                        $_SESSION['permisos'][4] = 'S';
+                    }
+                    if (isset($_POST['SAW'])) {
+                        $_SESSION['permisos'][5] = 'S';
+                    }
+                    include ("includes/abrirbd.php");
+                    $permisos = implode($_SESSION['permisos']);
+                    $sql = "UPDATE usuarios SET permisos = '{$permisos}' WHERE user ='{$_SESSION['user']}'";
+                    $resultado = mysqli_query($link, $sql);
+
+                    echo ("<h3><b>Matrícula realizada correctamente:</h3></b>");
+                    if (isset($_POST['IWVG'])) {
+                        echo ("Ingeniería Web: Visión General <br>");
+                    }
+                    if (isset($_POST['APAW'])) {
+                        echo ("Arquitectura y Patrones para Aplicaciones Web <br>");
+                    }
+                    if (isset($_POST['FEM'])) {
+                        echo ("Front-end para Móviles <br>");
+                    }
+                    if (isset($_POST['FENW'])) {
+                        echo ("Front-end para Navegadores Web <br>");
+                    }
+                    if (isset($_POST['PHP'])) {
+                        echo ("Back-end con Tecnologías de Libre Distribución <br>");
+                    }
+                    if (isset($_POST['SAW'])) {
+                        echo ("Seguridad en Aplicaciones Web <br>");
+                    }
+                }
+                else {
+                    echo '<b>Usuario incorrecto. La firma debe realizarla el usuario autenticado: '
+                        . $_SESSION['user'] . '</b>';
+                    echo '<br><br><b>No se ha realizado la matrícula</b>';
+                }
+            }
+            else
+                echo '<h3><b>COMPROBACIÓN DE FIRMA INCORRECTA</h3></b>';
+
+			echo '<br><br><a href="MasterWeb.php"> Volver a inicio </a>';
 		} else {
 			?>
 			<SCRIPT type="text/JavaScript">
