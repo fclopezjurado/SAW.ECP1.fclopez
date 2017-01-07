@@ -7,10 +7,15 @@
     </head>
 <body>    
 <?php
-//	session_start();
-//	include ("/includes/autenticado.php");
+session_start();
+include ("includes/autenticado.php");
 
-	// TODO 5: Comprobar autorización del usuario
+if (!(isset($_SESSION) && array_key_exists('permisos', $_SESSION) && is_array($_SESSION['permisos'])
+    && (count($_SESSION['permisos']) === 10) && ($_SESSION['permisos'][5] === 'S'))) {
+    header("Location:../login.php");
+    exit;
+}
+
 ?>
 	<br><br>
     <center>

@@ -1,3 +1,5 @@
-
-
-
+#AuthType Basic
+#AuthName "Restricted Files"
+#AuthBasicProvider file
+#AuthUserFile C:\xampp\apache\conf\passw
+#Require valid-user
